@@ -1,0 +1,8 @@
+{
+  "name": "SentinelFlow - Application Security Intelligence",
+  "description": "Evidence-backed application security platform: repository fingerprinting, OSV dependency analysis, SAST, secret detection, architecture attack graphs, and automated remediation.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

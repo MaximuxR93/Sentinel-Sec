@@ -1,0 +1,283 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Terminal,
+  ShieldCheck,
+  ArrowRight,
+  GitBranch,
+  Layers,
+  ShieldAlert,
+  Loader2,
+} from 'lucide-react';
+import { api } from '../lib/api-client';
+import { ScanJob } from '../types';
+import { Skeleton } from '../components/ui/Skeleton';
+import { ErrorState } from '../components/ui/ErrorState';
+
+export const ScanProgressPage: React.FC = () => {
+  const { scanId } = useParams<{ scanId: string }>();
+  const [scan, setScan] = useState<ScanJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!scanId) return;
+    setLoading(true);
+    api.getScan(scanId)
+      .then((data) => setScan(data))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [scanId]);
+
+  if (error) {
+    return (
+      <div className="py-8">
+        <ErrorState message={error} />
+      </div>
+    );
+  }
+
+  if (loading || !scan) {
+    return (
+      <div className="space-y-6 py-8">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 py-4">
+      {/* Top Header Card */}
+      <div className="rounded-[20px] bg-white border border-[#DDE4EE] p-6 shadow-[0_1px_2px_rgba(28,52,92,0.04),0_8px_24px_rgba(28,52,92,0.05)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] font-mono text-[#59627E] uppercase">
+                Job ID: {scan.id}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-[520] bg-[#E3EEF8] text-[#1F4E79] border border-[#C7DCF0]">
+                <ShieldCheck size={13} strokeWidth={1.7} />
+                <span className="capitalize">{scan.status}</span>
+              </span>
+            </div>
+            <h1 className="text-[28px] font-[500] text-[#020C21]">
+              Scan Analysis: {scan.repositoryName}
+            </h1>
+            <p className="text-[13px] font-[425] text-[#59627E] flex items-center gap-2">
+              <GitBranch size={13} />
+              <span>{scan.branch} · Commit:</span>
+              <span className="font-mono">{scan.commitSha}</span>
+              <span>· Profile:</span>
+              <span className="capitalize font-[500] text-[#020C21]">{scan.profile}</span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (!scan) return;
+                let currentIdx = 0;
+                setScan((s) => s ? {
+                  ...s,
+                  status: 'running',
+                  progressPercent: 14,
+                  stages: s.stages.map((st, i) => ({
+                    ...st,
+                    status: i === 0 ? 'running' : 'pending',
+                    durationMs: undefined,
+                  })),
+                  findingsCount: { critical: 0, high: 0, medium: 0, low: 0 },
+                } : null);
+
+                const interval = setInterval(() => {
+                  currentIdx += 1;
+                  setScan((s) => {
+                    if (!s) return null;
+                    const updatedStages = s.stages.map((st, i) => {
+                      if (i < currentIdx) return { ...st, status: 'completed' as const, durationMs: st.durationMs || 400 + i * 250 };
+                      if (i === currentIdx) return { ...st, status: 'running' as const };
+                      return { ...st, status: 'pending' as const };
+                    });
+
+                    const progress = Math.min(100, Math.round(((currentIdx + 1) / 7) * 100));
+                    const newFindings = currentIdx >= 4 ? { critical: 2, high: 2, medium: 1, low: 0 } : { critical: 0, high: 0, medium: 0, low: 0 };
+
+                    return {
+                      ...s,
+                      progressPercent: progress,
+                      stages: updatedStages,
+                      findingsCount: newFindings,
+                      status: currentIdx >= 6 ? 'completed' : 'running',
+                    };
+                  });
+
+                  if (currentIdx >= 6) {
+                    clearInterval(interval);
+                  }
+                }, 1200);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#CED5E0] px-4 py-2 text-[13px] font-[500] text-[#020C21] hover:bg-[#E6EDF6] transition-colors duration-150 shadow-sm cursor-pointer"
+            >
+              <Clock size={14} strokeWidth={1.7} />
+              <span>Re-run Live Simulation</span>
+            </button>
+            <Link
+              to="/demo"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#0F1B31] px-5 py-2 text-[13px] font-[500] text-white hover:bg-[#020C21] transition-colors duration-150 shadow-sm"
+            >
+              <span>View n8n Architecture Graph</span>
+              <ArrowRight size={14} strokeWidth={1.7} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Overall progress indicator bar */}
+        <div className="mt-6 pt-4 border-t border-[#CED5E0] space-y-2">
+          <div className="flex justify-between text-[13px] font-[470]">
+            <span className="text-[#59627E]">Stage Execution Progress</span>
+            <span className="text-[#020C21]">{scan.progressPercent}% Completed</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-[#E6EDF6] overflow-hidden">
+            <div
+              className="h-full bg-[#0F1B31] transition-all duration-300"
+              style={{ width: `${scan.progressPercent}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Grid: 7 Scan Stages Stepper vs Terminal Logs */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: 7 Defined Scan Stages (7 cols) */}
+        <div className="lg:col-span-7 rounded-[20px] bg-white border border-[#DDE4EE] p-6 shadow-[0_1px_2px_rgba(28,52,92,0.04),0_8px_24px_rgba(28,52,92,0.05)]">
+          <div className="flex items-center justify-between pb-4 border-b border-[#CED5E0] mb-4">
+            <div>
+              <h3 className="text-[18px] font-[500] text-[#020C21]">Analysis Pipeline Stages</h3>
+              <p className="text-[13px] font-[470] text-[#59627E]">
+                Deterministic execution steps per the SentinelFlow specification
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {scan.stages.map((stage, idx) => {
+              const isDone = stage.status === 'completed';
+              const isRunning = stage.status === 'running';
+
+              return (
+                <div
+                  key={stage.id}
+                  className={`flex items-start gap-3.5 p-3.5 rounded-[16px] border transition-colors ${
+                    isRunning
+                      ? 'bg-[#E3EEF8]/40 border-[#4A78B0]'
+                      : isDone
+                      ? 'bg-white border-[#DDE4EE]'
+                      : 'bg-[#E6EDF6]/30 border-transparent text-[#59627E]'
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {isDone ? (
+                      <CheckCircle2 size={18} strokeWidth={1.7} className="text-[#1F4E79]" />
+                    ) : isRunning ? (
+                      <Loader2 size={18} strokeWidth={1.7} className="text-[#4A78B0] animate-spin" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border border-[#CED5E0] flex items-center justify-center text-[10px] text-[#59627E]">
+                        {idx + 1}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-[520] text-[#020C21]">
+                        Stage {idx + 1}: {stage.label}
+                      </span>
+                      {stage.durationMs && (
+                        <span className="text-[12px] font-mono text-[#59627E]">
+                          {stage.durationMs}ms
+                        </span>
+                      )}
+                    </div>
+                    {stage.message && (
+                      <p className="text-[13px] font-[425] text-[#59627E]">
+                        {stage.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Console Logs & Coverage Metrics (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Findings Summary Card */}
+          <div className="rounded-[20px] bg-white border border-[#DDE4EE] p-6 shadow-[0_1px_2px_rgba(28,52,92,0.04),0_8px_24px_rgba(28,52,92,0.05)]">
+            <h3 className="text-[16px] font-[500] text-[#020C21] mb-3">
+              Scan Results Summary
+            </h3>
+            <div className="grid grid-cols-3 gap-2 text-center mb-4">
+              <div className="p-3 rounded-[12px] bg-[#FADADD]/40 border border-[#F4AEB6]">
+                <span className="text-[11px] uppercase font-[500] text-[#A1121F] block">Critical</span>
+                <span className="text-[22px] font-[360] text-[#A1121F]">
+                  {scan.findingsCount.critical}
+                </span>
+              </div>
+              <div className="p-3 rounded-[12px] bg-[#FCE4D6]/40 border border-[#F7C4A5]">
+                <span className="text-[11px] uppercase font-[500] text-[#9A3B0B] block">High</span>
+                <span className="text-[22px] font-[360] text-[#9A3B0B]">
+                  {scan.findingsCount.high}
+                </span>
+              </div>
+              <div className="p-3 rounded-[12px] bg-[#FBF0D9]/40 border border-[#F3DCAB]">
+                <span className="text-[11px] uppercase font-[500] text-[#7A5200] block">Medium</span>
+                <span className="text-[22px] font-[360] text-[#7A5200]">
+                  {scan.findingsCount.medium}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-[13px] text-[#59627E] space-y-1 border-t border-[#CED5E0] pt-3">
+              <div className="flex justify-between">
+                <span>Coverage:</span>
+                <span className="font-[520] text-[#020C21]">{scan.coverage.coveragePercent}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Scanned Packages:</span>
+                <span className="font-mono text-[#020C21]">{scan.coverage.scannedDependencies}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Skipped Packages:</span>
+                <span className="font-mono text-[#7A5200]">{scan.coverage.skippedDependencies} (unresolved)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Sandbox Logs Card */}
+          <div className="rounded-[20px] bg-[#020C21] text-white p-5 border border-[#CED5E0] shadow-sm font-mono text-[12px]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 text-[#CED5E0]">
+              <span className="flex items-center gap-1.5 font-sans font-[500] text-[13px] text-white">
+                <Terminal size={14} strokeWidth={1.7} />
+                <span>Sandbox Execution Logs</span>
+              </span>
+              <span className="text-[11px] text-[#CED5E0]/60">ISO 8601</span>
+            </div>
+
+            <div className="space-y-1.5 max-h-[260px] overflow-y-auto text-[#CED5E0]/90 pr-1">
+              {scan.logs.map((log, idx) => (
+                <div key={idx} className="leading-relaxed">
+                  {log}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

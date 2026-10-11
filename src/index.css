@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: #000000;
+    --text: #ffffff;
+    --text-dim: rgba(255, 255, 255, 0.62);
+    --text-dimmer: rgba(255, 255, 255, 0.42);
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.26);
+    --fill-ghost: rgba(255, 255, 255, 0.05);
+    --fill-solid: rgba(255, 255, 255, 0.10);
+    --gutter: clamp(20px, 5vw, 100px);
+    --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+
+    --font-display: "Sora", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-inter);
+    color: #020C21;
+    background-color: #E6EDF6;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body.menu-open {
+    overflow: hidden;
+  }
+
+  /* Accessible focus rings */
+  :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+}
+
+/* ECHOID Hero Layout */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  isolation: isolate;
+  background-color: var(--bg);
+}
+
+@media (max-height: 640px) {
+  .hero {
+    min-height: 100svh;
+  }
+}
+
+.hero__body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .hero__body {
+    justify-content: center;
+  }
+}
+
+.panel {
+  width: min(34vw, 620px);
+  min-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+@media (max-width: 1100px) {
+  .panel {
+    width: min(70vw, 520px);
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .panel {
+    width: 100%;
+    align-items: stretch;
+  }
+  .panel__chip {
+    align-self: flex-start !important;
+  }
+}
+
+.hero-h1 {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: clamp(54px, 6.2vw, 118px);
+  letter-spacing: 0.03em;
+  line-height: 0.95;
+  margin-top: clamp(28px, 3vw, 52px);
+}
+
+@media (max-width: 380px) {
+  .hero-h1 {
+    font-size: clamp(44px, 15vw, 64px);
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #E6EDF6;
+}
+::-webkit-scrollbar-thumb {
+  background: #CED5E0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #59627E;
+}
+
+/* SentinelFlow Custom Flow & Graph Animations */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.flow-edge-dashed {
+  stroke-dasharray: 6 6;
+  animation: flowDash 1.2s linear infinite;
+}
+
+@keyframes nodeFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-node-fade-in {
+  animation: nodeFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlowCyan {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.2), inset 0 0 15px rgba(34, 211, 238, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(34, 211, 238, 0.45), inset 0 0 20px rgba(34, 211, 238, 0.15);
+  }
+}
+
+@keyframes pulseGlowRed {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.3), inset 0 0 12px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.6), inset 0 0 20px rgba(239, 68, 68, 0.2);
+  }
+}
+
+.glow-cyan {
+  animation: pulseGlowCyan 2.5s ease-in-out infinite;
+}
+
+.glow-red {
+  animation: pulseGlowRed 1.8s ease-in-out infinite;
+}
