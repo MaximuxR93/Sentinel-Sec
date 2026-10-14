@@ -44,7 +44,7 @@ export const SettingsPage: React.FC = () => {
           System & Database Settings
         </h1>
         <p className="text-[15px] font-[425] text-[#59627E] mt-1.5">
-          MongoDB Atlas persistence, session lifetime, scan policies, network isolation constraints, and OSV cache.
+          MongoDB Atlas persistence, telemetry storage, scan policies, network isolation constraints, and OSV cache.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex items-center justify-between pb-3 border-b border-[#CED5E0]">
           <div className="flex items-center gap-2">
             <Database size={18} strokeWidth={1.7} className="text-[#2f5f9e]" />
-            <h3 className="text-[18px] font-[500] text-[#020C21]">MongoDB Atlas Authentication Store</h3>
+            <h3 className="text-[18px] font-[500] text-[#020C21]">MongoDB Atlas Telemetry Store</h3>
           </div>
           <button
             onClick={() => refreshDbStatus()}

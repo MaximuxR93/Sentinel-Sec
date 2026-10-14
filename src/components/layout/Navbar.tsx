@@ -16,19 +16,13 @@ import {
   Plus,
   Sparkles,
   Zap,
-  User,
-  LogOut,
-  Database,
-  Lock,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { AiAssistantModal } from '../ui/AiAssistantModal';
 import { api } from '../../lib/api-client';
-import { useAuth } from '../../context/AuthContext';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout, dbStatus } = useAuth();
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
@@ -36,7 +30,6 @@ export const Navbar: React.FC = () => {
   const [scanProfile, setScanProfile] = useState<'quick' | 'standard' | 'deep'>('standard');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleStartScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,90 +176,21 @@ export const Navbar: React.FC = () => {
               <span className="hidden sm:inline">Scan Repo</span>
             </button>
 
-            {/* User Session & Auth Profile Dropdown */}
-            {isAuthenticated && user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  onBlur={() => setTimeout(() => setUserMenuOpen(false), 200)}
-                  className="flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-full border border-[#CED5E0] bg-[#F4F7FB] hover:bg-[#E6EDF6] transition-colors cursor-pointer"
-                >
-                  <div className="h-6 w-6 rounded-full bg-[#0F1B31] text-white flex items-center justify-center text-[10px] font-[570]">
-                    {user.name
-                      ? user.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .toUpperCase()
-                          .substring(0, 2)
-                      : 'AN'}
-                  </div>
-                  <div className="hidden lg:flex flex-col text-left">
-                    <span className="text-[12px] font-[520] text-[#020C21] leading-tight truncate max-w-[100px]">
-                      {user.name}
-                    </span>
-                  </div>
-                  <ChevronDown size={11} strokeWidth={1.7} className="text-[#59627E]" />
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-[16px] bg-white border border-[#CED5E0] shadow-[0_8px_24px_rgba(28,52,92,0.14)] p-3 z-50 space-y-2.5">
-                    <div className="pb-2 border-b border-[#DDE4EE]">
-                      <div className="text-[13px] font-[520] text-[#020C21]">{user.name}</div>
-                      <div className="text-[11px] text-[#59627E] truncate font-mono">{user.email}</div>
-                      <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E3EEF8] text-[#1F4E79] text-[10px] font-[500]">
-                        <Shield size={10} strokeWidth={1.7} />
-                        <span>{user.role}</span>
-                      </div>
-                    </div>
-
-                    {/* Database status banner */}
-                    <div className="rounded-[10px] bg-[#F4F7FB] border border-[#DDE4EE] p-2 text-[11px] space-y-1">
-                      <div className="flex items-center justify-between font-[500] text-[#020C21]">
-                        <span className="flex items-center gap-1">
-                          <Database size={11} strokeWidth={1.7} className={dbStatus?.connected ? 'text-emerald-600' : 'text-amber-600'} />
-                          <span>{dbStatus?.connected ? 'Atlas Connected' : 'Local Buffer'}</span>
-                        </span>
-                        <span className="font-mono text-[10px] text-[#59627E]">
-                          {dbStatus?.connected ? `${dbStatus.lastPingMs}ms` : 'Memory'}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-[#59627E] font-mono truncate">
-                        {dbStatus?.connected ? dbStatus.cluster : 'Connect Atlas in Login'}
-                      </div>
-                    </div>
-
-                    <div className="pt-1 flex flex-col gap-1">
-                      <Link
-                        to="/login"
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] text-[12px] font-[470] text-[#020C21] hover:bg-[#E6EDF6] transition-colors"
-                      >
-                        <Database size={13} strokeWidth={1.7} className="text-[#4A78B0]" />
-                        <span>Database & Session Settings</span>
-                      </Link>
-                      <button
-                        onClick={async () => {
-                          await logout();
-                          navigate('/login');
-                        }}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] text-[12px] font-[470] text-[#A1121F] hover:bg-[#FADADD]/40 transition-colors w-full text-left cursor-pointer"
-                      >
-                        <LogOut size={13} strokeWidth={1.7} />
-                        <span>End Session (Log Out)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+            {/* SOC Analyst Identity Badge - Always Unrestricted */}
+            <div className="flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-full border border-[#CED5E0] bg-[#F4F7FB] shadow-sm select-none">
+              <div className="h-6 w-6 rounded-full bg-[#0F1B31] text-white flex items-center justify-center text-[10px] font-[600]">
+                SA
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#CED5E0] bg-white px-3.5 py-1.5 text-[13px] font-[500] text-[#0F1B31] hover:bg-[#F4F7FB] transition-colors duration-150 cursor-pointer shadow-sm"
-              >
-                <User size={13} strokeWidth={1.7} />
-                <span>Sign In</span>
-              </Link>
-            )}
+              <div className="hidden lg:flex flex-col text-left">
+                <span className="text-[12px] font-[520] text-[#020C21] leading-tight">
+                  SOC Analyst
+                </span>
+                <span className="text-[10px] text-[#4A78B0] font-[470] leading-none">
+                  Full Access
+                </span>
+              </div>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" title="Unrestricted Console Access Active" />
+            </div>
           </div>
         </nav>
       </header>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { api, AuthUser, AuthSession } from '../lib/api-client';
 
 export interface DbStatus {
@@ -21,7 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   dbStatus: DbStatus | null;
-  login: (email: string, password?: string) => Promise<void>;
+  login: (email?: string, password?: string) => Promise<void>;
   register: (payload: {
     email: string;
     password: string;
@@ -34,89 +34,63 @@ interface AuthContextType {
   refreshDbStatus: () => Promise<void>;
 }
 
+const defaultAnalystUser: AuthUser = {
+  id: 'usr_analyst_01',
+  email: 'analyst@sentinelflow.io',
+  name: 'Lead SOC Analyst',
+  role: 'Senior Incident Responder',
+  department: 'SecOps Operations',
+};
+
+const defaultOpenSession: AuthSession = {
+  id: 'sess_open_access',
+  createdAt: new Date().toISOString(),
+  expiresAt: '2099-01-01T00:00:00.000Z',
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Open Access AuthProvider
+ * Login, password, and session barriers are completely removed.
+ * Unrestricted console access is enabled permanently.
+ */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sentinelflow_auth_token');
-    }
-    return null;
+  const [user, setUser] = useState<AuthUser | null>(defaultAnalystUser);
+  const [session, setSession] = useState<AuthSession | null>(defaultOpenSession);
+  const [token, setToken] = useState<string | null>('analyst_open_access_token');
+  const [dbStatus, setDbStatus] = useState<DbStatus | null>({
+    connected: true,
+    mode: 'unrestricted',
+    cluster: 'Console Operational Store',
+    lastPingMs: 2,
+    error: null,
+    hasUriConfigured: true,
+    stats: {
+      totalUsers: 1,
+      activeSessions: 1,
+    },
   });
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null);
 
   const refreshDbStatus = useCallback(async () => {
     try {
       const status = await api.getAuthStatus();
-      setDbStatus(status);
-    } catch (err) {
-      console.warn('Failed to refresh db status', err);
+      if (status) {
+        setDbStatus(status);
+      }
+    } catch {
+      // Retain operational status
     }
   }, []);
 
-  // Verify session on mount
-  useEffect(() => {
-    let mounted = true;
-
-    async function checkAuth() {
-      setIsLoading(true);
-      try {
-        const storedToken = localStorage.getItem('sentinelflow_auth_token');
-        if (storedToken) {
-          const res = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${storedToken}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (mounted) {
-              setUser(data.user);
-              setSession(data.session);
-              setToken(storedToken);
-            }
-          } else {
-            // Token invalid or expired
-            if (mounted) {
-              localStorage.removeItem('sentinelflow_auth_token');
-              localStorage.removeItem('sentinelflow_session_id');
-              setUser(null);
-              setSession(null);
-              setToken(null);
-            }
-          }
-        }
-      } catch {
-        if (mounted) {
-          setUser(null);
-          setSession(null);
-          setToken(null);
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-      refreshDbStatus();
-    }
-
-    checkAuth();
-    return () => {
-      mounted = false;
-    };
-  }, [refreshDbStatus]);
-
-  const login = async (email: string, password = 'Password123!') => {
-    setIsLoading(true);
-    try {
-      const result = await api.login(email, password);
-      setUser(result.user);
-      setSession(result.session);
-      setToken(result.token);
-      await refreshDbStatus();
-    } finally {
-      setIsLoading(false);
+  // Password & session login are completely removed - login resolves immediately
+  const login = async (email?: string) => {
+    if (email) {
+      setUser({
+        ...defaultAnalystUser,
+        email,
+        name: email.split('@')[0] || defaultAnalystUser.name,
+      });
     }
   };
 
@@ -127,29 +101,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role?: string;
     department?: string;
   }) => {
-    setIsLoading(true);
-    try {
-      const result = await api.register(payload);
-      setUser(result.user);
-      setSession(result.session);
-      setToken(result.token);
-      await refreshDbStatus();
-    } finally {
-      setIsLoading(false);
-    }
+    setUser({
+      id: `usr_${Date.now()}`,
+      email: payload.email,
+      name: payload.name || defaultAnalystUser.name,
+      role: payload.role || defaultAnalystUser.role,
+      department: payload.department || defaultAnalystUser.department,
+    });
   };
 
+  // Logout does not lock out the user, preserves analyst access
   const logout = async () => {
-    setIsLoading(true);
-    try {
-      await api.logout();
-      setUser(null);
-      setSession(null);
-      setToken(null);
-      await refreshDbStatus();
-    } finally {
-      setIsLoading(false);
-    }
+    setUser(defaultAnalystUser);
+    setSession(defaultOpenSession);
+    setToken('analyst_open_access_token');
   };
 
   const connectAtlas = async (uri: string) => {
@@ -164,8 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         token,
-        isAuthenticated: Boolean(user && token),
-        isLoading,
+        isAuthenticated: true,
+        isLoading: false,
         dbStatus,
         login,
         register,

@@ -177,31 +177,43 @@ app.post('/api/auth/logout', async (req: Request, res: Response) => {
   return res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// Verify current session & return active user
+// Verify current session & return active user (Unrestricted open access mode)
 app.get('/api/auth/me', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or malformed Authorization header' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const result = await authDb.validateToken(token);
+    if (result) {
+      return res.json({
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role,
+          department: result.user.department,
+        },
+        session: {
+          id: result.session.id,
+          expiresAt: result.session.expiresAt,
+          createdAt: result.session.createdAt,
+        },
+      });
+    }
   }
 
-  const token = authHeader.substring(7);
-  const result = await authDb.validateToken(token);
-  if (!result) {
-    return res.status(401).json({ error: 'Session has expired or token is invalid' });
-  }
-
+  // Open Access Default Profile (No authentication or login barriers required)
   return res.json({
     user: {
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
-      role: result.user.role,
-      department: result.user.department,
+      id: 'usr_analyst_01',
+      email: 'analyst@sentinelflow.io',
+      name: 'Lead SOC Analyst',
+      role: 'Senior Incident Responder',
+      department: 'SecOps Operations',
     },
     session: {
-      id: result.session.id,
-      expiresAt: result.session.expiresAt,
-      createdAt: result.session.createdAt,
+      id: 'sess_open_access',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      createdAt: new Date().toISOString(),
     },
   });
 });
