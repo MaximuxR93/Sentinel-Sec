@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { Skeleton } from './components/ui/Skeleton';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy loading for every route per performance requirements
 const LandingPage = lazy(() =>
@@ -69,149 +71,181 @@ const PageLoader: React.FC = () => (
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Landing / ConSentinel Hero (The only heavy/glassy page) */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/demo" element={<DemoPage />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Routes: Landing, Live Demo & Analyst Login */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/demo" element={<DemoPage />} />
+            <Route
+              path="/login"
+              element={
+                <AppLayout>
+                  <LoginPage />
+                </AppLayout>
+              }
+            />
 
-          {/* Core Dashboard & Repository Intelligence Pages wrapped in Light AppLayout */}
-          <Route
-            path="/dashboard"
-            element={
-              <AppLayout>
-                <DashboardPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/repositories"
-            element={
-              <AppLayout>
-                <RepositoriesPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/repositories/:id"
-            element={
-              <AppLayout>
-                <RepositoryDetailPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/scans/:scanId"
-            element={
-              <AppLayout>
-                <ScanProgressPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/findings"
-            element={
-              <AppLayout>
-                <FindingsPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/attack-paths"
-            element={
-              <AppLayout>
-                <AttackPathsPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/remediation"
-            element={
-              <AppLayout>
-                <RemediationPage />
-              </AppLayout>
-            }
-          />
+            {/* Protected Console Routes: Requires valid session & token authentication */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <DashboardPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/repositories"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <RepositoriesPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/repositories/:id"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <RepositoryDetailPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scans/:scanId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ScanProgressPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/findings"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <FindingsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/attack-paths"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <AttackPathsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/remediation"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <RemediationPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Incident Triage Console & Backend Contract Routes */}
-          <Route
-            path="/queue"
-            element={
-              <AppLayout>
-                <QueuePage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/incidents/:id"
-            element={
-              <AppLayout>
-                <IncidentDetailPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/monitoring"
-            element={
-              <AppLayout>
-                <MonitoringPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/guardrails"
-            element={
-              <AppLayout>
-                <GuardrailsPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/memory"
-            element={
-              <AppLayout>
-                <MemoryPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/evals"
-            element={
-              <AppLayout>
-                <EvalsPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/submit"
-            element={
-              <AppLayout>
-                <SubmitPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <AppLayout>
-                <LoginPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <AppLayout>
-                <SettingsPage />
-              </AppLayout>
-            }
-          />
+            {/* Incident Triage Console & Backend Contract Routes */}
+            <Route
+              path="/queue"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <QueuePage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/incidents/:id"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <IncidentDetailPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/monitoring"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <MonitoringPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/guardrails"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <GuardrailsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/memory"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <MemoryPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/evals"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EvalsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/submit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <SubmitPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <SettingsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   );
 };

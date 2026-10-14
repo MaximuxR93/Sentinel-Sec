@@ -28,18 +28,56 @@ import {
 
 const USE_MOCK = true; // Default to true as required by project specs
 
-// In-memory state for mock updates
-let repositories = [...mockRepositories];
-let findings = [...mockFindings];
-let scanJobs = [...mockScanJobs];
-let incidents = [...mockIncidents];
-let remediations = [...mockRemediations];
-let currentUser = {
-  id: 'usr-1',
-  email: 'analyst@sentinelflow.io',
-  name: 'Sarah Chen',
-  role: 'Senior AppSec Analyst',
-};
+// LocalStorage helpers to ensure "the rest of the data will remain in local storage"
+function loadStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStorage<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // silent
+  }
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  department?: string;
+}
+
+export interface AuthSession {
+  id: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  session: AuthSession;
+  user: AuthUser;
+}
+
+const TOKEN_KEY = 'sentinelflow_auth_token';
+const SESSION_KEY = 'sentinelflow_session_id';
+
+// State initialized from localStorage with fallback to mock collections
+let repositories: Repository[] = loadStorage('sentinelflow_repositories', [...mockRepositories]);
+let findings: SecurityFinding[] = loadStorage('sentinelflow_findings', [...mockFindings]);
+let scanJobs: ScanJob[] = loadStorage('sentinelflow_scans', [...mockScanJobs]);
+let incidents: Incident[] = loadStorage('sentinelflow_incidents', [...mockIncidents]);
+let remediations: RemediationProposal[] = loadStorage('sentinelflow_remediations', [...mockRemediations]);
+let currentUser: AuthUser | null = null;
 
 // API Client implementation
 export const api = {
@@ -393,28 +431,138 @@ export const api = {
     return res.json();
   },
 
-  // Auth
-  async getCurrentUser() {
-    return currentUser;
+  // Auth & Session Management (Connected to MongoDB Atlas)
+  async getCurrentUser(): Promise<AuthUser | null> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    if (!token) return null;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(SESSION_KEY);
+        }
+        currentUser = null;
+        return null;
+      }
+      const data = await res.json();
+      currentUser = data.user;
+      return data.user;
+    } catch {
+      return null;
+    }
   },
 
-  async login(email: string) {
-    currentUser = {
-      id: 'usr-1',
-      email,
-      name: email.split('@')[0],
-      role: 'Senior AppSec Analyst',
-    };
-    return currentUser;
+  async login(email: string, password = 'Password123!'): Promise<AuthResponse> {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed');
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(SESSION_KEY, data.session.id);
+    }
+    currentUser = data.user;
+    return data;
   },
 
-  async logout() {
-    currentUser = {
-      id: '',
-      email: '',
-      name: '',
-      role: '',
+  async register(payload: {
+    email: string;
+    password: string;
+    name: string;
+    role?: string;
+    department?: string;
+  }): Promise<AuthResponse> {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(SESSION_KEY, data.session.id);
+    }
+    currentUser = data.user;
+    return data;
+  },
+
+  async logout(): Promise<void> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ token }),
+        });
+      } catch {
+        // silent
+      }
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+    }
+    currentUser = null;
+  },
+
+  async getAuthStatus(): Promise<{
+    connected: boolean;
+    mode: string;
+    cluster: string;
+    lastPingMs: number;
+    error: string | null;
+    hasUriConfigured: boolean;
+    stats: { totalUsers: number; activeSessions: number };
+  }> {
+    try {
+      const res = await fetch('/api/auth/status');
+      if (res.ok) return res.json();
+    } catch {}
+    return {
+      connected: false,
+      mode: 'in_memory_buffer',
+      cluster: 'Local Memory Buffer',
+      lastPingMs: 0,
+      error: null,
+      hasUriConfigured: false,
+      stats: { totalUsers: 2, activeSessions: 1 },
     };
+  },
+
+  async configureDb(mongoUri: string): Promise<{ success: boolean; message: string; cluster?: string }> {
+    const res = await fetch('/api/auth/configure-db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mongoUri }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to connect to MongoDB Atlas');
+    }
+    return data;
+  },
+
+  async getAuthAuditLogs(): Promise<{ logs: any[] }> {
+    try {
+      const res = await fetch('/api/auth/audit-logs');
+      if (res.ok) return res.json();
+    } catch {}
+    return { logs: [] };
   },
 
   // AI Assistance & Groq Integration (Server-side proxy routes)

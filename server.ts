@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authDb } from './src/server/auth-db';
 
 dotenv.config();
 
@@ -39,6 +40,177 @@ const AVAILABLE_GROQ_MODELS = [
 ];
 
 app.use(express.json());
+
+// ==========================================
+// AUTHENTICATION & MONGODB ATLAS API ROUTES
+// ==========================================
+
+// Get database connectivity & auth system status
+app.get('/api/auth/status', (_req: Request, res: Response) => {
+  res.json(authDb.getStatus());
+});
+
+// Configure or test live MongoDB Atlas connection
+app.post('/api/auth/configure-db', async (req: Request, res: Response) => {
+  try {
+    const { mongoUri } = req.body;
+    if (!mongoUri || typeof mongoUri !== 'string') {
+      return res.status(400).json({ error: 'MongoDB Atlas connection URI is required' });
+    }
+    const result = await authDb.connect(mongoUri);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Failed to connect to MongoDB Atlas' });
+  }
+});
+
+// Register new analyst account in MongoDB Atlas
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  try {
+    const { email, password, name, role, department } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, password, and name are required' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const user = await authDb.createUser({ email, password, name, role, department });
+    const ip = req.ip || (req.headers['x-forwarded-for'] as string) || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'SentinelFlow-Client';
+    const session = await authDb.createSession(user, ip, userAgent);
+
+    return res.status(201).json({
+      token: session.token,
+      session: {
+        id: session.id,
+        expiresAt: session.expiresAt,
+        createdAt: session.createdAt,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        department: user.department,
+      },
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Registration failed' });
+  }
+});
+
+// Login with email and password (session-based + token-based)
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await authDb.findUserByEmail(email);
+    if (!user) {
+      const ip = req.ip || (req.headers['x-forwarded-for'] as string) || '127.0.0.1';
+      await authDb.logAudit({
+        userEmail: email,
+        action: 'login_failed',
+        timestamp: new Date().toISOString(),
+        ip,
+        metadata: { reason: 'User not found' },
+      });
+      return res.status(401).json({ error: 'Invalid email or credentials' });
+    }
+
+    const isValid = await authDb.verifyPassword(user, password);
+    if (!isValid) {
+      const ip = req.ip || (req.headers['x-forwarded-for'] as string) || '127.0.0.1';
+      await authDb.logAudit({
+        userId: user.id,
+        userEmail: user.email,
+        action: 'login_failed',
+        timestamp: new Date().toISOString(),
+        ip,
+        metadata: { reason: 'Password mismatch' },
+      });
+      return res.status(401).json({ error: 'Invalid email or credentials' });
+    }
+
+    const ip = req.ip || (req.headers['x-forwarded-for'] as string) || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'SentinelFlow-Client';
+    const session = await authDb.createSession(user, ip, userAgent);
+
+    return res.json({
+      token: session.token,
+      session: {
+        id: session.id,
+        expiresAt: session.expiresAt,
+        createdAt: session.createdAt,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        department: user.department,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Authentication error' });
+  }
+});
+
+// Invalidate session (logout)
+app.post('/api/auth/logout', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : req.body?.token;
+
+  if (token) {
+    await authDb.invalidateSession(token);
+    await authDb.logAudit({
+      action: 'logout',
+      timestamp: new Date().toISOString(),
+      metadata: { tokenPrefix: token.substring(0, 10) },
+    });
+  }
+  return res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// Verify current session & return active user
+app.get('/api/auth/me', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or malformed Authorization header' });
+  }
+
+  const token = authHeader.substring(7);
+  const result = await authDb.validateToken(token);
+  if (!result) {
+    return res.status(401).json({ error: 'Session has expired or token is invalid' });
+  }
+
+  return res.json({
+    user: {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+      role: result.user.role,
+      department: result.user.department,
+    },
+    session: {
+      id: result.session.id,
+      expiresAt: result.session.expiresAt,
+      createdAt: result.session.createdAt,
+    },
+  });
+});
+
+// Security Audit Logs
+app.get('/api/auth/audit-logs', async (_req: Request, res: Response) => {
+  const logs = await authDb.getRecentAuditLogs();
+  res.json({ logs });
+});
 
 // API: AI Status (Never exposes raw secrets)
 app.get('/api/ai/status', (_req: Request, res: Response) => {

@@ -1422,10 +1422,16 @@ export const DemoPage: React.FC = () => {
                     AST & Evidence Inspector
                   </span>
                   <h3 className="text-[18px] font-[500] text-white flex items-center gap-2">
-                    <span>Target: {selectedNode?.name}</span>
-                    <span className="text-[12px] font-mono text-[#CED5E0]/60 font-normal">
-                      ({selectedNode?.fileReference})
-                    </span>
+                    {scanState === 'idle' ? (
+                      <span>System Scan Pending · 10 Components Queued</span>
+                    ) : (
+                      <>
+                        <span>Target: {selectedNode?.name}</span>
+                        <span className="text-[12px] font-mono text-[#CED5E0]/60 font-normal">
+                          ({selectedNode?.fileReference})
+                        </span>
+                      </>
+                    )}
                   </h3>
                 </div>
 
@@ -1465,7 +1471,26 @@ export const DemoPage: React.FC = () => {
                 </div>
               </div>
 
-              {selectedVuln ? (
+              {scanState === 'idle' ? (
+                <div className="py-12 text-center text-[#CED5E0]/70 text-[13px] space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                    <Code2 size={24} />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <p className="text-white font-[500]">Architecture Inspection Awaiting Scan</p>
+                    <p className="text-[12px] text-[#CED5E0]/60 leading-relaxed">
+                      Launch the autonomous scan to discover microservice nodes, parse AST call trees, and reveal interactive patch diffs.
+                    </p>
+                  </div>
+                  <button
+                    onClick={runSimulation}
+                    className="px-5 py-2 rounded-full bg-cyan-400 text-black text-[12px] font-[520] hover:bg-cyan-300 transition-colors inline-flex items-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <Play size={13} strokeWidth={2.4} />
+                    <span>Run Live Scan Simulation</span>
+                  </button>
+                </div>
+              ) : selectedVuln ? (
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -1586,9 +1611,7 @@ export const DemoPage: React.FC = () => {
                 <div className="py-12 text-center text-[#CED5E0]/60 text-[13px] space-y-2">
                   <ShieldCheck size={28} className="mx-auto text-cyan-400" />
                   <p>
-                    {scanState === 'idle'
-                      ? 'Scan not initiated yet. Click "Run Live Scan Simulation" to begin.'
-                      : `No open vulnerabilities detected in ${selectedNode?.name}.`}
+                    {`No open vulnerabilities detected in ${selectedNode?.name}.`}
                   </p>
                   <span className="text-[11px] text-[#CED5E0]/40 block font-mono">
                     Component: {selectedNode?.description}
@@ -1602,11 +1625,19 @@ export const DemoPage: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <h3 className="text-[16px] font-[500] text-white">The2ndBrain Findings Ledger</h3>
                 <span className="text-[12px] text-cyan-400 font-mono">
-                  {fixedCount}/{totalRevealed || 4} Remediated
+                  {scanState === 'idle' ? '0 Discovered' : `${fixedCount}/${totalRevealed || 4} Remediated`}
                 </span>
               </div>
 
-              {revealedVulnIds.length === 0 ? (
+              {scanState === 'idle' ? (
+                <div className="py-12 text-center text-[#CED5E0]/60 text-[12px] space-y-2">
+                  <Activity size={24} className="mx-auto text-cyan-400/60" />
+                  <p className="text-white/90 font-[500]">No Findings Pre-disclosed</p>
+                  <p className="text-[11px] text-[#CED5E0]/60 max-w-xs mx-auto">
+                    Findings will be discovered dynamically during Stage 5 of the scan.
+                  </p>
+                </div>
+              ) : revealedVulnIds.length === 0 ? (
                 <div className="py-10 text-center text-[#CED5E0]/50 text-[12px] space-y-2">
                   <Activity size={24} className="mx-auto text-cyan-400/60" />
                   <p>Findings will appear here during Stage 5 of the scan.</p>
@@ -1706,9 +1737,43 @@ export const DemoPage: React.FC = () => {
             </div>
 
             {/* Roadmap Phases Grid */}
-            <div className="space-y-6">
-              {/* PHASE 1: P0 - Immediate Critical Emergency Mitigations */}
-              <div className="rounded-[22px] bg-white/[0.03] border border-red-500/30 p-6 space-y-4">
+            {scanState === 'idle' ? (
+              <div className="rounded-[24px] bg-white/[0.04] border border-cyan-500/20 p-10 backdrop-blur-xl text-center space-y-5">
+                <div className="h-16 w-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                  <ListOrdered size={32} />
+                </div>
+                <div className="max-w-xl mx-auto space-y-2">
+                  <h3 className="text-[20px] font-[500] text-white">
+                    Remediation Roadmap Awaiting Scan Execution
+                  </h3>
+                  <p className="text-[13px] text-[#CED5E0]/70 leading-relaxed">
+                    The phased remediation playbook (Phase 1: P0 Emergency Fixes, Phase 2: P1 Architectural Fortification, Phase 3: CI/CD Guardrails) generates automatically after the AST engine parses repository dependencies and validates exploitable breach paths.
+                  </p>
+                </div>
+                <button
+                  onClick={runSimulation}
+                  className="px-6 py-2.5 rounded-full bg-cyan-400 text-black text-[13px] font-[520] hover:bg-cyan-300 transition-colors inline-flex items-center gap-2 cursor-pointer shadow-[0_0_25px_rgba(34,211,238,0.4)]"
+                >
+                  <Play size={14} strokeWidth={2.4} />
+                  <span>Start Autonomous Scan & Build Roadmap</span>
+                </button>
+              </div>
+            ) : scanState === 'running' && revealedVulnIds.length === 0 ? (
+              <div className="rounded-[24px] bg-white/[0.04] border border-amber-500/30 p-10 backdrop-blur-xl text-center space-y-4">
+                <Loader2 size={36} className="text-amber-400 animate-spin mx-auto" />
+                <div className="max-w-md mx-auto space-y-1">
+                  <h3 className="text-[18px] font-[500] text-white">
+                    Correlating Vulnerabilities & Calculating Blast Radius...
+                  </h3>
+                  <p className="text-[13px] text-[#CED5E0]/70">
+                    Executing Stage {currentRunningStage + 1} of 7. The prioritized remediation playbook will unlock as findings are confirmed.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* PHASE 1: P0 - Immediate Critical Emergency Mitigations */}
+                <div className="rounded-[22px] bg-white/[0.03] border border-red-500/30 p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2.5">
                     <span className="px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40">
@@ -1904,8 +1969,9 @@ export const DemoPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
         {/* ========================================================================= */}
         {/* TAB 4: WELL DETAILED EXPLANATION PAGE / AUDIT REPORT                     */}
@@ -1949,18 +2015,53 @@ export const DemoPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Assessment Meta & Executive Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[13px]">
-              <div className="rounded-[18px] bg-white/[0.04] border border-white/10 p-4 space-y-1">
-                <span className="text-[11px] font-mono text-[#CED5E0]/50 uppercase">Max CVSS Risk</span>
-                <span className="text-[28px] font-[200] text-red-400 block">9.4 / 10</span>
-                <span className="text-[11px] text-red-300/80">Critical Exploitability</span>
+            {scanState === 'idle' ? (
+              <div className="rounded-[24px] bg-white/[0.04] border border-cyan-500/20 p-10 backdrop-blur-xl text-center space-y-5">
+                <div className="h-16 w-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                  <FileText size={32} />
+                </div>
+                <div className="max-w-xl mx-auto space-y-2">
+                  <h3 className="text-[20px] font-[500] text-white">
+                    Deep Audit Report Pending Scan Execution
+                  </h3>
+                  <p className="text-[13px] text-[#CED5E0]/70 leading-relaxed">
+                    The comprehensive security assessment report, AST taint call graphs, CVSS vulnerability rankings, and verified mitigation guidance will be compiled once the autonomous scan runs.
+                  </p>
+                </div>
+                <button
+                  onClick={runSimulation}
+                  className="px-6 py-2.5 rounded-full bg-cyan-400 text-black text-[13px] font-[520] hover:bg-cyan-300 transition-colors inline-flex items-center gap-2 cursor-pointer shadow-[0_0_25px_rgba(34,211,238,0.4)]"
+                >
+                  <Play size={14} strokeWidth={2.4} />
+                  <span>Start Autonomous Scan & Generate Report</span>
+                </button>
               </div>
-              <div className="rounded-[18px] bg-white/[0.04] border border-white/10 p-4 space-y-1">
-                <span className="text-[11px] font-mono text-[#CED5E0]/50 uppercase">Analyzed Files</span>
-                <span className="text-[28px] font-[200] text-white block">233 Files</span>
-                <span className="text-[11px] text-[#CED5E0]/60">1,420 AST Function Nodes</span>
+            ) : scanState === 'running' && revealedVulnIds.length === 0 ? (
+              <div className="rounded-[24px] bg-white/[0.04] border border-cyan-500/30 p-10 backdrop-blur-xl text-center space-y-4">
+                <Loader2 size={36} className="text-cyan-400 animate-spin mx-auto" />
+                <div className="max-w-md mx-auto space-y-1">
+                  <h3 className="text-[18px] font-[500] text-white">
+                    Synthesizing Evidence & AST Taint Graphs...
+                  </h3>
+                  <p className="text-[13px] text-[#CED5E0]/70">
+                    Executing Stage {currentRunningStage + 1} of 7. The complete audit report will render upon scan completion.
+                  </p>
+                </div>
               </div>
+            ) : (
+              <>
+                {/* Assessment Meta & Executive Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[13px]">
+                  <div className="rounded-[18px] bg-white/[0.04] border border-white/10 p-4 space-y-1">
+                    <span className="text-[11px] font-mono text-[#CED5E0]/50 uppercase">Max CVSS Risk</span>
+                    <span className="text-[28px] font-[200] text-red-400 block">9.4 / 10</span>
+                    <span className="text-[11px] text-red-300/80">Critical Exploitability</span>
+                  </div>
+                  <div className="rounded-[18px] bg-white/[0.04] border border-white/10 p-4 space-y-1">
+                    <span className="text-[11px] font-mono text-[#CED5E0]/50 uppercase">Analyzed Files</span>
+                    <span className="text-[28px] font-[200] text-white block">233 Files</span>
+                    <span className="text-[11px] text-[#CED5E0]/60">1,420 AST Function Nodes</span>
+                  </div>
               <div className="rounded-[18px] bg-white/[0.04] border border-white/10 p-4 space-y-1">
                 <span className="text-[11px] font-mono text-[#CED5E0]/50 uppercase">Dependency Depth</span>
                 <span className="text-[28px] font-[200] text-cyan-400 block">65 Packages</span>
@@ -2093,8 +2194,10 @@ export const DemoPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </>
         )}
+      </div>
+    )}
       </div>
     </div>
   );
