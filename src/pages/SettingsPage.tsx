@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Sliders, Shield, Key, GitBranch, Database, Check, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Sliders, Shield, Key, GitBranch, Database, Check, RefreshCw, AlertTriangle, CheckCircle2, Sparkles, ExternalLink, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAi } from '../context/AiContext';
 
 export const SettingsPage: React.FC = () => {
   const { dbStatus, connectAtlas, refreshDbStatus } = useAuth();
+  const { activeProvider, activeModel, providers, openModal: openAiModal, hasActiveKey } = useAi();
 
   const [osvCacheEnabled, setOsvCacheEnabled] = useState(true);
   const [ssrfGuardrailStrict, setSsrfGuardrailStrict] = useState(true);
@@ -134,6 +136,78 @@ export const SettingsPage: React.FC = () => {
             </div>
           )}
         </form>
+      </div>
+
+      {/* Multi-Model AI Reasoning Engines & API Keys */}
+      <div className="rounded-[20px] bg-white border border-[#DDE4EE] p-6 shadow-[0_1px_2px_rgba(28,52,92,0.04),0_8px_24px_rgba(28,52,92,0.05)] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#CED5E0] gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} strokeWidth={1.8} className="text-[#1F4E79]" />
+            <h3 className="text-[18px] font-[500] text-[#020C21]">Multi-Model AI Reasoning & API Keys</h3>
+          </div>
+          <button
+            type="button"
+            onClick={openAiModal}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#0F1B31] text-white hover:bg-[#020C21] text-[12.5px] font-[500] transition-colors cursor-pointer shadow-sm"
+          >
+            <Key size={13} />
+            <span>Select Model & Enter API Keys</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-[14px] bg-[#F4F7FB] border border-[#DDE4EE]">
+            <span className="text-[11px] font-[470] uppercase text-[#59627E] block">Active AI Provider</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              <span className="text-[14px] font-[520] text-[#020C21] capitalize">
+                {activeProvider === 'sentinelflow' ? 'SentinelFlow AST (Built-in)' : activeProvider}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-[14px] bg-[#F4F7FB] border border-[#DDE4EE]">
+            <span className="text-[11px] font-[470] uppercase text-[#59627E] block">Active Model Identifier</span>
+            <span className="text-[13px] font-mono text-[#020C21] mt-1 block truncate font-[500]">
+              {activeModel}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-[14px] bg-[#F4F7FB] border border-[#DDE4EE]">
+            <span className="text-[11px] font-[470] uppercase text-[#59627E] block">Key / Readiness</span>
+            <div className="flex items-center gap-1.5 mt-1">
+              {hasActiveKey ? (
+                <span className="text-[13px] font-[500] text-emerald-700 flex items-center gap-1">
+                  <Check size={13} strokeWidth={2.5} /> Ready for Triage
+                </span>
+              ) : (
+                <span className="text-[13px] font-[500] text-amber-700">Key Required</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <span className="text-[12px] font-[500] text-[#59627E] block mb-2">Supported Multi-Model Gateways</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            {providers.map((p) => (
+              <div
+                key={p.id}
+                onClick={openAiModal}
+                className={`p-2.5 rounded-[12px] border text-center cursor-pointer transition-all ${
+                  activeProvider === p.id
+                    ? 'border-[#0F1B31] bg-[#E3EEF8]/40 ring-1 ring-[#0F1B31]'
+                    : 'border-[#CED5E0] bg-[#FAFCFF] hover:border-[#4A78B0]'
+                }`}
+              >
+                <span className="text-[12px] font-[520] text-[#020C21] block">{p.name}</span>
+                <span className="text-[10px] text-[#59627E] font-mono block mt-0.5">
+                  {p.models.length} model{p.models.length > 1 ? 's' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

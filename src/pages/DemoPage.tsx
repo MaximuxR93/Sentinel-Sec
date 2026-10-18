@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api-client';
+import { useAi } from '../context/AiContext';
 import {
   Sparkles,
   Play,
@@ -528,6 +529,8 @@ const mockLogsSequence = [
 ];
 
 export const DemoPage: React.FC = () => {
+  const { activeModel, activeProvider, openModal: openAiModal, explainFinding } = useAi();
+
   // Navigation & Active View Tabs
   const [activeTab, setActiveTab] = useState<'split' | 'pipeline' | 'graph' | 'roadmap' | 'explanation'>('split');
 
@@ -592,6 +595,13 @@ export const DemoPage: React.FC = () => {
       }
     }
     checkAiBackend();
+
+    // Auto-launch simulation on mount so user immediately sees live data progression
+    const autoLaunchTimer = setTimeout(() => {
+      runSimulation();
+    }, 450);
+
+    return () => clearTimeout(autoLaunchTimer);
   }, []);
 
   // Handle Live Simulation Stepper
@@ -624,69 +634,67 @@ export const DemoPage: React.FC = () => {
   useEffect(() => {
     if (scanState !== 'running' || isPaused) return;
 
-    const delay = paceSpeed === 'realistic' ? 1700 : 650;
+    const delay = paceSpeed === 'realistic' ? 1400 : 550;
 
     const timer = setTimeout(() => {
-      setCurrentRunningStage((prev) => {
-        const next = prev + 1;
+      const next = currentRunningStage + 1;
 
-        // Progressively reveal nodes and metrics based on stage reached
-        if (next === 1) {
-          // Stage 2: Checkout Snapshot
-          setDiscoveredNodeIds(['node-client', 'node-gateway']);
-          setLogs((l) => [...l, mockLogsSequence[2], mockLogsSequence[3], mockLogsSequence[4]]);
-        } else if (next === 2) {
-          // Stage 3: Fingerprinting
-          setDiscoveredNodeIds(['node-client', 'node-gateway', 'node-multer', 'node-parser', 'node-chunker']);
-          setLogs((l) => [...l, mockLogsSequence[5], mockLogsSequence[6]]);
-        } else if (next === 3) {
-          // Stage 4: Dep resolution - All 10 nodes mapped!
-          setDiscoveredNodeIds(the2ndBrainNodes.map((n) => n.id));
-          setCoveragePercent(90.77);
-          setScannedPackages(59);
-          setSkippedPackagesText('6 (devDependencies)');
-          setLogs((l) => [...l, mockLogsSequence[7], mockLogsSequence[8]]);
-        } else if (next === 4) {
-          // Stage 5: Security Engines run - findings appear!
-          setRevealedVulnIds(['vuln-prompt', 'vuln-pdf', 'vuln-multer', 'vuln-auth']);
-          setCriticalCount(1);
-          setHighCount(1);
-          setLogs((l) => [...l, mockLogsSequence[9], mockLogsSequence[10], mockLogsSequence[11]]);
-          setTimeout(() => {
-            setCriticalCount(2);
-            setHighCount(2);
-            setLogs((l) => [...l, mockLogsSequence[12], mockLogsSequence[13], mockLogsSequence[14]]);
-          }, delay / 2);
-        } else if (next === 5) {
-          // Stage 6: Graph Correlation
-          setLogs((l) => [...l, mockLogsSequence[15]]);
-        } else if (next === 6) {
-          // Stage 7: Report Persistence
-          setLogs((l) => [...l, mockLogsSequence[16]]);
-        }
+      // Progressively reveal nodes and metrics based on stage reached
+      if (next === 1) {
+        // Stage 2: Checkout Snapshot
+        setDiscoveredNodeIds(['node-client', 'node-gateway']);
+        setLogs((l) => [...l, mockLogsSequence[2], mockLogsSequence[3], mockLogsSequence[4]]);
+      } else if (next === 2) {
+        // Stage 3: Fingerprinting
+        setDiscoveredNodeIds(['node-client', 'node-gateway', 'node-multer', 'node-parser', 'node-chunker']);
+        setLogs((l) => [...l, mockLogsSequence[5], mockLogsSequence[6]]);
+      } else if (next === 3) {
+        // Stage 4: Dep resolution - All 10 nodes mapped!
+        setDiscoveredNodeIds(the2ndBrainNodes.map((n) => n.id));
+        setCoveragePercent(90.77);
+        setScannedPackages(59);
+        setSkippedPackagesText('6 (devDependencies)');
+        setLogs((l) => [...l, mockLogsSequence[7], mockLogsSequence[8]]);
+      } else if (next === 4) {
+        // Stage 5: Security Engines run - findings appear!
+        setRevealedVulnIds(['vuln-prompt', 'vuln-pdf', 'vuln-multer', 'vuln-auth']);
+        setCriticalCount(2);
+        setHighCount(2);
+        setLogs((l) => [
+          ...l,
+          mockLogsSequence[9],
+          mockLogsSequence[10],
+          mockLogsSequence[11],
+          mockLogsSequence[12],
+          mockLogsSequence[13],
+          mockLogsSequence[14],
+        ]);
+      } else if (next === 5) {
+        // Stage 6: Graph Correlation
+        setLogs((l) => [...l, mockLogsSequence[15]]);
+      } else if (next >= 6) {
+        // Stage 7: Report Persistence & Finalization
+        setLogs((l) => [...l, mockLogsSequence[16]]);
+        setScanState('completed');
+        setStages((s) => s.map((st, i) => ({ ...st, status: 'completed', durationMs: defaultStages[i].durationMs })));
+        setCurrentRunningStage(6);
+        return;
+      }
 
-        // Update stage status
-        setStages((prevStages) =>
-          prevStages.map((stage, idx) => {
-            if (idx < next) {
-              return { ...stage, status: 'completed', durationMs: defaultStages[idx].durationMs };
-            } else if (idx === next) {
-              return { ...stage, status: 'running' };
-            } else {
-              return { ...stage, status: 'pending' };
-            }
-          })
-        );
+      // Update stage status
+      setStages((prevStages) =>
+        prevStages.map((stage, idx) => {
+          if (idx < next) {
+            return { ...stage, status: 'completed', durationMs: defaultStages[idx].durationMs };
+          } else if (idx === next) {
+            return { ...stage, status: 'running' };
+          } else {
+            return { ...stage, status: 'pending' };
+          }
+        })
+      );
 
-        if (next >= 6) {
-          setScanState('completed');
-          // Complete all stages
-          setStages((s) => s.map((st, i) => ({ ...st, status: 'completed', durationMs: defaultStages[i].durationMs })));
-          return 6;
-        }
-
-        return next;
-      });
+      setCurrentRunningStage(next);
     }, delay);
 
     return () => clearTimeout(timer);
@@ -727,33 +735,25 @@ export const DemoPage: React.FC = () => {
     setAiAnalysis(null);
   };
 
-  // Trigger Live Groq AI / SentinelFlow Engine Analysis
+  // Trigger Live Multi-Model AI / SentinelFlow Engine Analysis
   const loadAiAnalysis = async (vuln: DemoVulnerability) => {
     setLoadingAi(true);
     setAiAnalysis(null);
 
     try {
-      const response = await fetch('/api/ai/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: vuln.title,
-          ruleId: vuln.ruleId,
-          cwe: vuln.cwe,
-          file: vuln.file,
-          codeSnippet: vuln.codeSnippet,
-          explanation: vuln.explanation,
-          cvss: vuln.cvss,
-        }),
+      const res = await explainFinding({
+        title: vuln.title,
+        ruleId: vuln.ruleId,
+        cwe: vuln.cwe,
+        file: vuln.file,
+        codeSnippet: vuln.codeSnippet,
+        explanation: vuln.explanation,
+        cvss: vuln.cvss,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAiAnalysis(data.analysis || data.answer || 'AST analysis generated successfully.');
-        setAiProvider(data.provider === 'groq' ? 'groq' : 'engine');
-      } else {
-        throw new Error('Analysis request failed');
-      }
+      setAiAnalysis(res.analysis);
+      setAiProvider(res.provider === 'sentinelflow' ? 'engine' : 'groq');
+      setAiStatusMessage(`${res.model} (${res.provider.toUpperCase()})`);
     } catch {
       // Local fallback with rich expert security explanation
       setAiAnalysis(
@@ -1542,26 +1542,34 @@ export const DemoPage: React.FC = () => {
                       <div className="flex items-center justify-between pb-2 border-b border-white/10 text-[11px] font-mono">
                         <div className="flex items-center gap-2">
                           <Bot size={14} className="text-cyan-400" />
-                          <span className="text-cyan-300 font-[500]">
-                            {aiProvider === 'groq' ? 'Groq Llama-3.3-70B Active' : 'SentinelFlow AST Engine'}
-                          </span>
+                          <button
+                            onClick={openAiModal}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-400/30 transition-colors cursor-pointer"
+                            title="Click to switch AI Model or enter API keys"
+                          >
+                            <Sparkles size={11} />
+                            <span className="font-[520]">{activeModel}</span>
+                          </button>
                         </div>
-                        <span className="text-[#CED5E0]/60">
-                          {aiStatusMessage || 'Automated Security Intelligence'}
-                        </span>
+                        <button
+                          onClick={openAiModal}
+                          className="text-cyan-400 hover:text-white underline text-[11px] font-mono cursor-pointer"
+                        >
+                          Configure Keys & Models
+                        </button>
                       </div>
 
                       {loadingAi ? (
                         <div className="py-8 text-center space-y-2">
                           <Loader2 size={22} className="animate-spin text-cyan-400 mx-auto" />
                           <p className="text-[#CED5E0]/70 text-[12px] font-mono">
-                            Querying Groq AI inference backend for AST evidence analysis...
+                            Querying {activeModel} inference backend for AST evidence analysis...
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="text-[#CED5E0] leading-relaxed whitespace-pre-wrap font-sans text-[13px] bg-white/[0.02] p-4 rounded-[12px] border border-white/5">
-                            {aiAnalysis || 'Click below to generate live Groq AI analysis for this vulnerability.'}
+                            {aiAnalysis || `Click below to generate live ${activeModel} security analysis for this vulnerability.`}
                           </div>
                           <div className="flex items-center justify-between pt-1">
                             <button
@@ -1569,10 +1577,10 @@ export const DemoPage: React.FC = () => {
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[12px] font-[500] hover:bg-cyan-400/30 transition-colors cursor-pointer"
                             >
                               <Sparkles size={12} />
-                              <span>Regenerate AI Analysis</span>
+                              <span>Analyze with {activeModel}</span>
                             </button>
                             <span className="text-[11px] text-[#CED5E0]/50 font-mono">
-                              Server-side /api/ai/explain proxy
+                              Proxied via /api/ai/explain
                             </span>
                           </div>
                         </div>

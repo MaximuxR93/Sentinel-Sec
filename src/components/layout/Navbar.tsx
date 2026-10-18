@@ -20,9 +20,11 @@ import {
 import { Modal } from '../ui/Modal';
 import { AiAssistantModal } from '../ui/AiAssistantModal';
 import { api } from '../../lib/api-client';
+import { useAi } from '../../context/AiContext';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
+  const { activeProvider, activeModel, openModal: openAiModelModal } = useAi();
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
@@ -168,6 +170,18 @@ export const Navbar: React.FC = () => {
               <Sparkles size={13} strokeWidth={1.7} className="text-[#2f5f9e]" />
               <span className="hidden sm:inline">Live Demo</span>
             </Link>
+            <button
+              onClick={openAiModelModal}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#CED5E0] bg-white px-3 py-1.5 text-[12px] font-[500] text-[#020C21] hover:bg-[#F4F7FB] transition-colors cursor-pointer shadow-sm"
+              title={`Active AI Model: ${activeModel} (${activeProvider.toUpperCase()}). Click to change model or configure API keys.`}
+            >
+              <Sparkles size={13} strokeWidth={1.8} className="text-[#1F4E79]" />
+              <span className="font-mono text-[11px] font-[520] truncate max-w-[130px]">
+                {activeModel}
+              </span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </button>
+
             <button
               onClick={() => setIsScanModalOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-full bg-[#0F1B31] px-3.5 py-1.5 text-[13px] font-[500] text-white hover:bg-[#020C21] transition-colors duration-150 cursor-pointer shadow-sm"

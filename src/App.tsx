@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { Skeleton } from './components/ui/Skeleton';
 import { AuthProvider } from './context/AuthContext';
+import { AiProvider } from './context/AiContext';
+import { AiModelModal } from './components/ai/AiModelModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy loading for every route per performance requirements
@@ -72,7 +74,9 @@ const PageLoader: React.FC = () => (
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <AiProvider>
+        <AiModelModal />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes: Landing, Live Demo & Analyst Login */}
@@ -246,6 +250,7 @@ export const App: React.FC = () => {
           </Routes>
         </Suspense>
       </BrowserRouter>
-    </AuthProvider>
-  );
+    </AiProvider>
+  </AuthProvider>
+);
 };

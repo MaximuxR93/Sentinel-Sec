@@ -15,6 +15,7 @@ import {
   Zap,
   Sparkles,
   RefreshCw,
+  Network,
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { SecurityFinding, Severity, SecurityEngineType, FindingStatus } from '../types';
@@ -438,15 +439,24 @@ export const FindingsPage: React.FC = () => {
 
               {/* Remediation & Proposed Diff Preview */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-wrap items-center justify-between mb-2 gap-2">
                   <h3 className="text-[15px] font-[500] text-[#020C21]">Suggested Remediation</h3>
-                  <Link
-                    to={`/remediation?findingId=${activeFinding.id}`}
-                    className="text-[13px] font-[470] text-[#4A78B0] hover:underline inline-flex items-center gap-1"
-                  >
-                    <Wrench size={13} strokeWidth={1.7} />
-                    <span>Open in Remediation Workspace</span>
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to={`/attack-paths?findingId=${activeFinding.id}`}
+                      className="text-[13px] font-[470] text-[#1F4E79] hover:underline inline-flex items-center gap-1"
+                    >
+                      <Network size={13} strokeWidth={1.7} />
+                      <span>Inspect in Workflow Graph</span>
+                    </Link>
+                    <Link
+                      to={`/remediation?findingId=${activeFinding.id}`}
+                      className="text-[13px] font-[470] text-[#4A78B0] hover:underline inline-flex items-center gap-1"
+                    >
+                      <Wrench size={13} strokeWidth={1.7} />
+                      <span>Remediation Workspace</span>
+                    </Link>
+                  </div>
                 </div>
 
                 <p className="text-[14px] font-[425] text-[#59627E] mb-3 leading-relaxed whitespace-pre-wrap">

@@ -660,7 +660,7 @@ export const mockScanJobs: ScanJob[] = [
     branch: 'main',
     commitSha: 'a7b89c2d1e',
     profile: 'standard',
-    status: 'partial',
+    status: 'completed',
     progressPercent: 100,
     currentStage: 'persistence',
     stages: [
