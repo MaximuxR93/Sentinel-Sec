@@ -19,6 +19,10 @@
 
 ---
 
+<p align="center">
+  <img src="public/Sentinel-W.png" alt="SentinelFlow dashboard" width="800" />
+</p>
+
 ## 🌟 Executive Summary
 
 Modern engineering and DevSecOps teams face an overwhelming flood of security alerts. Traditional scanners produce **85%+ unreachable false positives**, provide disconnected CVE lists without call-graph context, and leave engineers with hours of manual patch authoring.
