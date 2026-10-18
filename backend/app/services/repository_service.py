@@ -18,7 +18,7 @@ from app.schemas.repository import RepositoryMetadata
 
 # The analyzer package is a sibling of the backend directory.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-ANALYZER_ROOT = PROJECT_ROOT / "analyzer"
+ANALYZER_ROOT = Path(__file__).resolve().parents[2] / "analyzer"
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
